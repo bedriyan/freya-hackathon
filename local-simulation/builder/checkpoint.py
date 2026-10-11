@@ -53,7 +53,10 @@ if __name__ == "__main__":
             if code: bad.append("selftest.py failed:\n" + text[-600:])
     if not bad:
         cases = json.loads((out / "cases.json").read_text()) if (out / "cases.json").exists() else []
-        n, lost, kinds = asyncio.run(replay(json.loads((out / "workflow.json").read_text()), json.loads(pathlib.Path(a.api).read_text()), a.recordings, cases))
+        from bank import knows
+        api = json.loads(pathlib.Path(a.api).read_text())
+        # the replay and the random calls need the local copy of the bank; for a bank with other services only the three checks above apply
+        n, lost, kinds = asyncio.run(replay(json.loads((out / "workflow.json").read_text()), api, a.recordings, cases)) if knows(api) else (0, [], [])
         ck = out / "ckpt"; before = json.loads((ck / "state.json").read_text()) if (ck / "state.json").exists() else {"n": 0, "lost": None, "kinds": None}
         # the first checkpoint sets the level; a later one must not lose a recorded call or add a kind of defect that the one before did not have
         if before["lost"] is not None and len(lost) > len(before["lost"]): bad.append(f"{len(lost)} recorded calls that passed no longer give their bank records (last checkpoint: {len(before['lost'])}):\n  " + "\n  ".join(x for x in lost if x not in before["lost"])[:900])

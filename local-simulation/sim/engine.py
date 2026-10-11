@@ -347,6 +347,29 @@ class Engine:
             elif isinstance(d, str) and (m := PLACEHOLDER.fullmatch(d.strip())) and not self.is_set(m.group(1).strip()): out[m.group(1).strip()] = (field, spec)
         return out
 
+    def _fill(self, spec):
+        """(is the field sent, its value) for a body field the workflow fills. A field can be an object: its default is then a dict or list
+        with placeholders inside, or it has `properties` that each carry their own default. A placeholder whose variable is unset is dropped from the request."""
+        if not isinstance(spec, dict): return False, None
+        if spec.get("default") is not None: return self._resolve(spec["default"], spec)
+        if isinstance(spec.get("properties"), dict):
+            out = {k: v for k, (there, v) in ((k, self._fill(sp)) for k, sp in spec["properties"].items()) if there}
+            return bool(out), out
+        return False, None
+
+    def _resolve(self, d, spec=None):
+        spec = spec if isinstance(spec, dict) else {}
+        if isinstance(d, str):
+            if (m := PLACEHOLDER.fullmatch(d.strip())):
+                name = m.group(1).strip()
+                return (True, self._coerce(self.vars[name], spec)) if self.is_set(name) else (False, None)
+            return True, self.sub(d)
+        if isinstance(d, dict):
+            props = spec.get("properties") if isinstance(spec.get("properties"), dict) else {}
+            return True, {k: v for k, (there, v) in ((k, self._resolve(x, props.get(k))) for k, x in d.items()) if there}
+        if isinstance(d, list): return True, [v for there, v in (self._resolve(x, spec.get("items")) for x in d) if there]
+        return True, d
+
     def _coerce(self, v, spec):
         try:
             if spec.get("type") == "number": return float(v)
@@ -411,10 +434,8 @@ class Engine:
                 v = flat.get(by_field[field], flat.get(field))
                 if v is not None: cfg["body"][field] = self._coerce(v, spec)
             else:
-                d = spec.get("default")
-                if isinstance(d, str) and (m := PLACEHOLDER.fullmatch(d.strip())):
-                    if self.is_set(m.group(1).strip()): cfg["body"][field] = self._coerce(self.vars[m.group(1).strip()], spec)     # an unset one is dropped from the request
-                elif d is not None: cfg["body"][field] = self.sub(d) if isinstance(d, str) else d
+                there, v = self._fill(spec)
+                if there: cfg["body"][field] = v
         if (t.get("pre_process_code") or "").strip(): self._run_code(t["pre_process_code"], {"vars": self.vars, "config": cfg}, f"pre hook of {name}")
         self.event(event="function_call_start", function=name if owner == name else "api_call", args=cfg)
         retries = int((t.get("config") or {}).get("maxRetries") or 0)
@@ -422,7 +443,7 @@ class Engine:
         if blocked: status, data, res = 0, None, {"status": "error", "data": None, "message": "Missing required field: url", "status_code": 0}
         else:
             for _ in range(retries + 1):
-                status, data = self.bank.http(cfg["url"], cfg.get("method"), cfg.get("body"))
+                status, data = self.bank.http(cfg["url"], cfg.get("method"), cfg.get("body"), cfg.get("headers")) if getattr(self.bank, "remote", False) else self.bank.http(cfg["url"], cfg.get("method"), cfg.get("body"))
                 if status < 500: break
             res = ({"status": "success", "data": data, "message": f"Successfully executed {cfg.get('method')} request", "status_code": status, "header": {"Content-Type": "application/json"}} if status < 400
                    else {"status": "error", "data": data, "message": f"API request failed: {data}", "status_code": status})

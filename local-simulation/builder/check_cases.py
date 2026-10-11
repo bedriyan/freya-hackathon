@@ -11,6 +11,7 @@ import collections, json, sys
 
 STYLES = ("pieces", "corrects", "talkative", "asks_back", "in_words")
 NEED = {"id", "variables", "identity", "products", "script", "expected", "checks"}
+PRACTICE = ("verify_identity", "get_account", "create_promise", "add_note", "schedule_callback", "transfer_to_agent", "close_call")     # the services the local test bank copies
 
 
 def enum(api, tool, field):
@@ -21,7 +22,26 @@ def enum(api, tool, field):
     return []
 
 
+def service_gaps(cases, api):
+    """The same count for a bank whose services are not the practice ones (cases in the shape of CASE-FORMAT-SERVICES.md)."""
+    out, need = [], {"id", "variables", "script", "checks"}
+    cases = [c for c in cases if isinstance(c, dict) and need <= set(c)]
+    names = [next((p for p in reversed(path.strip("/").split("/")) if not p.startswith("{")), path) for path in (api.get("paths") or {})]
+    seen = {k.get("tool") for c in cases for k in ((c.get("expected") or {}).get("calls") or [])}
+    lost = [n for n in names if n not in seen]
+    if lost: out.append(f"services: no case expects a call of {lost}. Write a case that leads to each, unless the documents never lead to it.")
+    if len(cases) < 22: out.append(f"number: {len(cases)} cases, at least 22 are needed")
+    styles = collections.Counter(c.get("style") for c in cases if c.get("style"))
+    lost = [s for s in STYLES if not styles[s]]
+    if lost: out.append(f"way of talking: no case has the style {lost}")
+    if sum(styles.values()) < 6: out.append(f"way of talking: {sum(styles.values())} cases have a style, at least 6 are needed")
+    if sum(bool(c.get("faults")) for c in cases) < 2: out.append("service failures: fewer than 2 cases with `faults`, on different services")
+    if len({json.dumps(c["variables"], sort_keys=True) for c in cases}) < 4: out.append("test customers: fewer than 4 different sets of call variables; use more of the bank's listed test customers")
+    return out, len(cases)
+
+
 def gaps(cases, api):
+    if not all(n in PRACTICE for n in (p.rstrip("/").split("/")[-1] for p in (api.get("paths") or {}))): return service_gaps(cases, api)
     out = []
     cases = [c for c in cases if isinstance(c, dict) and NEED <= set(c)]
     exp = [c["expected"] for c in cases]

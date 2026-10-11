@@ -31,6 +31,7 @@ REPAIR_TURN = 270         # one repair turn is at most this long, so that two or
 REPAIR_NEEDS_LATER = AFTER_REPAIR + 120                                         # a second round is shorter: measured 22-77 s of repair + ~70 s test + ~60 s model-free test + ~110 s delivery
 REPAIR_NEEDS_PLATFORM = 16 * 60                                       # a test round on the platform has taken up to 16 minutes when simulations queue
 CASE_FORMAT = HERE.parent / "cases" / "CASE-FORMAT.md"
+CASE_FORMAT_SERVICES = HERE.parent / "cases" / "CASE-FORMAT-SERVICES.md"      # for a bank whose services are not the ones the local test bank copies
 
 WRITE_CASES = """Read CASE-FORMAT.md in this folder and follow it. Brief documents, in the order they were given: {briefs}. Tool API file: {api}.
 Write the test customers to cases.json in this folder: a JSON list. Use "brief": "{letter}" and the ids T-01, T-02, ... in every case.
@@ -154,6 +155,12 @@ class Run:
 
     def left(self): return BUDGET - (time.time() - self.t0)
 
+    def local_bank(self):
+        """True when the local test bank implements every service of the tool API file. Otherwise the test calls go to the bank's own services at the mock address."""
+        sys.path.insert(0, str(SIM.parent)) if str(SIM.parent) not in sys.path else None
+        from bank import knows
+        return knows(json.loads((self.work / self.api).read_text()))
+
     def log(self, kind, **data):
         self.trace.write(json.dumps({"type": kind, "t": round(time.time() - self.t0, 1), **data}, default=str) + "\n"); self.trace.flush()
 
@@ -217,7 +224,7 @@ class Run:
         t, work = time.time(), pathlib.Path(tempfile.mkdtemp(prefix=f"cases-{self.slot}-"))
         names = []
         for b in self.briefs: shutil.copy(self.work / b, work / pathlib.Path(b).name); names.append(pathlib.Path(b).name)
-        shutil.copy(self.work / self.api, work / "tool_api.json"); shutil.copy(CASE_FORMAT, work / "CASE-FORMAT.md")
+        shutil.copy(self.work / self.api, work / "tool_api.json"); shutil.copy(CASE_FORMAT if self.local_bank() else CASE_FORMAT_SERVICES, work / "CASE-FORMAT.md")
         options = ClaudeAgentOptions(cwd=work, model=os.environ.get("CASES_MODEL", "claude-opus-5-5"), setting_sources=[], allowed_tools=["Read", "Write", "Edit", "Bash"],
                                      permission_mode="dontAsk", max_turns=40, env={"CLAUDE_CODE_DISABLE_BACKGROUND_TASKS": "1"})
         try:
@@ -240,7 +247,7 @@ class Run:
                     self.log("case_gaps", round=2, cases=n, gaps=missing)
                 self.case_gaps = missing
             cases = json.loads((work / "cases.json").read_text())
-            need = {"id", "variables", "identity", "products", "script", "expected", "checks"}
+            need = {"id", "variables", "identity", "products", "script", "expected", "checks"} if self.local_bank() else {"id", "variables", "script", "checks"}
             cases = [c for c in cases if isinstance(c, dict) and need <= set(c)]
             for c in cases: c["brief"] = CASE_LETTER
             if not cases: raise ValueError("no usable case in cases.json")
@@ -359,6 +366,10 @@ class Run:
         cases = self.out / "cases.json"
         if self.a.cases and not cases.exists(): shutil.copy(self.a.cases, cases)
         cmd = [sys.executable, str(self.work / "fuzz_workflow.py"), str(self.out / "workflow.json"), str(self.work / self.api), "--runs", "400", "--md", str(self.out / name), "--json", str(self.out / f"fuzz-{rnd}.json")]
+        if not self.local_bank():        # the random and replayed calls need the local copy of the bank; for other services only the agent's own rule tests and the brief's items run
+            (self.out / f"fuzz-{rnd}.json").write_text(json.dumps({"runs": 0, "defect_runs": 0, "groups": [], "kinds": {}}))
+            (self.out / name).write_text("The random and replayed calls were not run: this bank's services have no local copy. The two checks below ran.\n")
+            cmd = [sys.executable, "-c", "pass"]
         if cases.exists(): cmd += ["--cases", str(cases)]
         if folder and self.a.test_on == "local": cmd += ["--recordings", folder]
         try:
@@ -404,7 +415,7 @@ class Run:
         for f in bad:
             c, shown = cases[f["id"]], False
             lines += [f"## {c['id']}: {c['title']} (passed {f['passes']} of {f['runs']} runs)", f"- What the customer does: {c['script']}", f"- Call variables: {json.dumps(c['variables'])}",
-                      f"- Account: {json.dumps(c['products'])}", f"- Expected bank records: {json.dumps(c['expected'])}", "- The judge's checks: " + " | ".join(c["checks"]),
+                      *([f"- Account: {json.dumps(c['products'])}"] if "products" in c else []), f"- Expected bank records: {json.dumps(c.get('expected'), ensure_ascii=False)}", "- The judge's checks: " + " | ".join(c["checks"]),
                       *([f"- A tool is made to fail: {json.dumps(c['faults'])}"] if c.get("faults") else []), *([f"- Way of talking: {c['style']}"] if c.get("style") else []), ""]
             for r in (r for r in s["rows"] if r["id"] == f["id"] and not r["pass"]):
                 lines.append(f"### run {r['rep']}: ended with {r.get('ending')}")
@@ -479,7 +490,9 @@ class Run:
         self.started = time.strftime("%Y-%m-%dT%H:%M:%S%z")
         if not self.api: await self.contract()
         self.log("start", start=self.started, slot=slot, inputs=a.inputs, model=options.model, cases=a.cases)
-        writing = asyncio.create_task(self.write_cases()) if (not a.cases and a.write_cases and self.can_check) else None
+        remote_untestable = not self.local_bank() and not a.mock                # services the local bank does not copy, and no address to call them at
+        if remote_untestable: self.say("the bank's services have no local copy and no mock address was given: no test customers, only the readers check the workflow")
+        writing = asyncio.create_task(self.write_cases()) if (not a.cases and a.write_cases and self.can_check and not remote_untestable) else None
         async with ClaudeSDKClient(options=options) as client:
             await self.turn(client, f"Use the build-phone-agent skill to build a phone agent. Slot: {slot}. "
                                     f"Brief documents, in reading order: {', '.join(self.briefs)}. Word, Excel and PDF files have a .txt copy; read that. Tool API file: {self.api}."

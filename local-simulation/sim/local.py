@@ -16,9 +16,9 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 KIT = ROOT.parent / "kit" / "build-the-builder"
 sys.path[:0] = [str(KIT), str(KIT / "tools"), str(ROOT / "sim")]
 from score import score_ledger
-from run_cases import persona_for, STYLES
+from run_cases import persona_for, STYLES, PERSONA
 import llm
-from bank import Bank
+from bank import Bank, RemoteBank, knows, score_calls
 from engine import Engine
 
 CUSTOMER_SYSTEM = (ROOT / "prompts" / "customer_system.txt").read_text().strip()
@@ -48,20 +48,28 @@ def judge_input(messages, criteria, ending):
             .replace("{numbered_transcript}", "\n".join(lines)).replace("{system_context}", "\n".join(ev))), lines
 
 
+def persona_of(case, style=None):
+    """The simulated customer of a case for a bank other than the practice one: who they are is the case's own `who` line."""
+    who = case.get("who") or "You are the customer who called the bank."
+    text = PERSONA.format(who=who, script=case["script"]) + ("\n\n" + STYLES[style] if style in STYLES else "")
+    return {"name": case["id"] + " " + str(case.get("title", "")), "prompt": text, "successCriteria": "All of these are true:\n- " + "\n- ".join(case["checks"]), "tags": []}
+
+
 async def run_case(case, rep, workflow, api, a, sem, outdir):
     row = {"id": case["id"], "rep": rep, "family": case.get("family", ""), "level": case.get("level", ""), "brief": case["brief"], "pass": False, "failed": [], "invalid": False}
     async with sem:
         t0 = time.time()
         try:
             style = a.style or case.get("style")
-            persona = persona_for(case, {"identity": case["identity"]}, style)
+            local = knows(api)                                   # the seven services the local bank copies; any other bank is called at its own address
+            persona = persona_for(case, {"identity": case["identity"]}, style) if local else persona_of(case, style)
             cid = "c_local_" + uuid.uuid4().hex[:10]
-            bank = Bank(case, api, cid)
+            bank = Bank(case, api, cid) if local else RemoteBank(case, api)
             calls = {"n": 0}
             async def ask(prompt, system):
                 calls["n"] += 1
                 return await llm.ask(a.agent_model, prompt, system=system, role="agent")
-            eng = Engine(workflow, {**case["variables"], "customer_id": cid}, bank, ask)
+            eng = Engine(workflow, {**case["variables"], "customer_id": cid} if local else dict(case["variables"]), bank, ask)
             ending, said_bye, silent = None, False, 0
             async with llm.Chat(a.customer_model, CUSTOMER_SYSTEM + "\n\n" + persona["prompt"]) as customer:
                 await eng.start()
@@ -86,7 +94,7 @@ async def run_case(case, rep, workflow, api, a, sem, outdir):
             try: verdict = llm.parse_json(raw)
             except Exception: verdict = llm.parse_json(await llm.ask(a.judge_model, prompt + "\n\nAnswer with the JSON object only.", system=JSON_ONLY, role="judge"))
             led = bank.ledger()
-            s = score_ledger(case, led)
+            s = score_ledger(case, led) if local else score_calls(case, led)
             errors = [json.loads(m["message"]).get("message") for m in eng.messages if m["role"] == "system" and '"event": "error"' in m["message"]]
             row.update(ending=ending, turns=len(transcript), tools=[c["tool"] for c in led["calls"]], ledger_failed=s["failed"], agent_model_calls=calls["n"], engine_errors=errors,
                        judge_success=verdict.get("success"), judge_reason=verdict.get("reason"))

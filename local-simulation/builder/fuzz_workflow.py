@@ -486,4 +486,11 @@ if __name__ == "__main__":
     ap.add_argument("--regression", action="store_true", help="also report a passed recorded call whose replay no longer gives its bank records (use after a repair)")
     ap.add_argument("--deep-per-step", type=int, default=6)
     ap.add_argument("--runs", type=int, default=600); ap.add_argument("--seed", type=int, default=1); ap.add_argument("--show", type=int, default=15); ap.add_argument("--md"); ap.add_argument("--json")
-    sys.exit(asyncio.run(main(ap.parse_args())))
+    a = ap.parse_args()
+    from bank import knows
+    if not knows(json.loads(pathlib.Path(a.api).read_text())):      # random calls need the local copy of the bank's services, which exists for the practice bank's seven only
+        text = "fuzz_workflow.py has no local copy of this bank's services: the random calls are not run. Rely on check_workflow.py and selftest.py."
+        if a.md: pathlib.Path(a.md).write_text(text + "\n")
+        if a.json: pathlib.Path(a.json).write_text(json.dumps({"runs": 0, "defect_runs": 0, "groups": [], "kinds": {}}))
+        print(text); sys.exit(0)
+    sys.exit(asyncio.run(main(a)))

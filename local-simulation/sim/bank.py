@@ -4,7 +4,7 @@ Built from what the real mock returned in our recorded calls and from its tool A
 enforce the brief: it records a promise on a holiday or below the minimum without complaint.
 The ledger has the shape the kit's scorer (tools/score.py) reads.
 """
-import datetime, re, urllib.parse
+import datetime, json, re, urllib.error, urllib.parse, urllib.request
 
 
 class Bank:
@@ -112,3 +112,91 @@ class Bank:
         return {"ok": True, "case": self.case.get("id"), "now": (self.case.get("variables") or {}).get("now"), "verified": self.verified, "wrong": self.wrong, "hinted": self.hinted,
                 "promises": self.promises, "notes": self.notes, "callbacks": self.callbacks, "transfers": self.transfers,
                 "outcome": self.outcome, "reason": self.reason, "failures": self.failures, "calls": self.calls}
+
+
+def tools(api):
+    """The service names of a tool API file: the last fixed part of each path."""
+    return [next((p for p in reversed(path.strip("/").split("/")) if not p.startswith("{")), path) for path in (api.get("paths") or {})]
+
+
+def knows(api):
+    """True when the local bank above implements every service of this tool API file. For any other bank the test calls go to
+    the bank's own services at the address the tool API file names (RemoteBank)."""
+    names = tools(api)
+    return bool(names) and all(hasattr(Bank, "_" + n) for n in names)
+
+
+class RemoteBank:
+    """The bank's real services (its mock), reached over HTTP. Same interface as Bank: http() and ledger().
+    Only the server of the tool API file is called. `faults` of a case are made here: the first n calls of that service fail with 500."""
+    remote = True
+
+    def __init__(self, case, api, customer_id=None):
+        self.case = case
+        self.base = ((api.get("servers") or [{}])[0].get("url") or "").rstrip("/")
+        self.routes = []
+        for path, name in zip(api.get("paths") or {}, tools(api)):
+            self.routes.append((re.compile("".join(r"(?P<%s>[^/]+)" % p[1:-1] if p.startswith("{") else re.escape(p) for p in re.split(r"(\{[^}]+\})", path.rstrip("/"))) + r"/?$"), name))
+        self.faults = {f["tool"]: int(f.get("fail_first_n", 0)) for f in case.get("faults") or []}
+        self.calls, self.failures = [], {}
+
+    def http(self, url, method="POST", body=None, headers=None):
+        url, method = str(url), str(method or "POST").upper()
+        parsed = urllib.parse.urlparse(url)
+        tool, args = parsed.path.rstrip("/").split("/")[-1], dict(urllib.parse.parse_qsl(parsed.query))
+        for rx, name in self.routes:
+            m = rx.search(parsed.path)
+            if m: tool = name; args.update(m.groupdict()); break
+        if isinstance(body, str):                       # a pre hook can set the body to a text, which is sent as it is
+            try: sent = json.loads(body)
+            except Exception: sent = None
+            if isinstance(sent, dict): args.update(sent)
+        elif isinstance(body, dict): args.update(body)
+        if not self.base or not url.startswith(self.base): status, result = 0, {"error": f"{url} is not at the bank's address {self.base or '(none)'}"}
+        elif self.faults.get(tool, 0) > 0:
+            self.faults[tool] -= 1; self.failures[tool] = self.failures.get(tool, 0) + 1
+            status, result = 500, {"error": "service unavailable"}
+        else:
+            data = None
+            if method in ("GET", "DELETE", "HEAD"):
+                if isinstance(body, dict) and body: url += ("&" if parsed.query else "?") + urllib.parse.urlencode(body)
+            else: data = body.encode() if isinstance(body, str) else json.dumps(body if body is not None else {}).encode()
+            req = urllib.request.Request(url, data=data, method=method, headers={"content-type": "application/json", "user-agent": "Mozilla/5.0", **{k: str(v) for k, v in (headers or {}).items() if v not in (None, "")}})
+            try:
+                with urllib.request.urlopen(req, timeout=30) as r: status, raw = r.status, r.read().decode()
+            except urllib.error.HTTPError as e: status, raw = e.code, e.read().decode()
+            except Exception as e: status, raw = 503, json.dumps({"error": f"{type(e).__name__}: {e}"})
+            try: result = json.loads(raw) if raw.strip() else None
+            except Exception: result = raw[:2000]
+        self.calls.append({"n": len(self.calls) + 1, "tool": tool, "method": method, "args": args, "status": status, "result": result})
+        return status, result
+
+    def ledger(self):
+        return {"ok": True, "case": self.case.get("id"), "now": (self.case.get("variables") or {}).get("now"), "failures": self.failures, "calls": self.calls}
+
+
+def _leaves(obj, path=""):
+    if isinstance(obj, dict):
+        for k, v in obj.items(): yield from _leaves(v, f"{path}.{k}" if path else str(k))
+    elif isinstance(obj, list):
+        for i, v in enumerate(obj): yield from _leaves(v, f"{path}.{i}" if path else str(i))
+    else: yield path, obj
+
+
+def carries(args, field, value):
+    """True when the request carried this field with this value. The field is named by its own name or by its path ("account_id" or "data.account_id"):
+    a bank can put its request fields inside an object. Numbers and their text are the same value ("3" and 3)."""
+    if isinstance(value, dict): return all(carries(args, f"{field}.{k}", v) for k, v in value.items())
+    same = lambda a: str(a).strip() == str(value).strip() or (isinstance(a, bool) and str(a).lower() == str(value).strip().lower())
+    return any(same(v) for p, v in _leaves(args) if p == field or p.endswith("." + field))
+
+
+def score_calls(case, ledger):
+    """The part of a test a program can decide when the bank is remote: the service calls the case expects were made, the ones it forbids were not."""
+    exp, failed, calls = case.get("expected") or {}, [], ledger["calls"]
+    for want in exp.get("calls") or []:
+        if not any(c["tool"] == want.get("tool") and all(carries(c["args"], k, v) for k, v in (want.get("args") or {}).items()) for c in calls):
+            failed.append(f"no call of {want.get('tool')} with {json.dumps(want.get('args') or {}, ensure_ascii=False)}; calls made: {[(c['tool'], c['args']) for c in calls]}"[:400])
+    for tool in exp.get("no_calls") or []:
+        if any(c["tool"] == tool for c in calls): failed.append(f"{tool} was called and must not be")
+    return {"failed": failed}
