@@ -8,3 +8,4 @@ __pycache__/
 local-simulation/results/
 local-simulation/builder/out/
 local-simulation/builder/traces/
+.freya-agents.json

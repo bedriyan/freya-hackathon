@@ -41,8 +41,11 @@ def save_workflow(slot, workflow, state_file=".freya-agents.json"):
     import pathlib
     f = pathlib.Path(state_file); state = json.loads(f.read_text()) if f.exists() else {}
     if slot in state:
-        state[slot]["version"] = update_workflow(state[slot]["workflow_id"], workflow); f.write_text(json.dumps(state, indent=1))
-    else:
+        try:
+            state[slot]["version"] = update_workflow(state[slot]["workflow_id"], workflow); f.write_text(json.dumps(state, indent=1)); return state[slot]
+        except RuntimeError as e:      # the state file names a workflow this key cannot reach (another workspace, or deleted): create a new one
+            print(f"  slot {slot}: the saved workflow cannot be updated ({str(e)[:120]}); creating a new one", flush=True); del state[slot]
+    if slot not in state:
         state[slot] = create_workflow(f"{slot} {time.strftime('%m%d-%H%M%S')}", workflow); f.write_text(json.dumps(state, indent=1))
     return state[slot]
 def validate_workflow(name, workflow): return api("POST", "/api/v2/workflow", {"name": name, "workflow": workflow}, dryRun="true")
