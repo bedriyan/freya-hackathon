@@ -25,7 +25,7 @@ Output: `local-simulation/builder/out/<name>/` (`workflow.json`, `exported.workf
 
 ## What one run does
 
-Diagrams of the run, of what runs in parallel, of the repair loop and of the local simulation engine: [ARCHITECTURE.md](ARCHITECTURE.md).
+![One run of the builder](diagrams/1-run.svg)
 
 1. **Build** (Claude Opus, Claude Agent SDK, skill `local-simulation/builder/.claude/skills/build-phone-agent/SKILL.md`): reads the
    brief, writes a numbered rule list (`rules.md`, checked against the brief by `check_rules.py`), then a generator (`gen.py`) that
@@ -46,6 +46,26 @@ Diagrams of the run, of what runs in parallel, of the repair loop and of the loc
 
 Without `ANTHROPIC_API_KEY` in the environment steps 2 and 4 to 6 are skipped and the first version is delivered.
 
+## How it works, in diagrams
+
+The same diagrams with more text are in [ARCHITECTURE.md](ARCHITECTURE.md).
+
+**The repair loop and its checkpoints** (`build.py`, `checkpoint.py`)
+
+![The repair loop and its checkpoints](diagrams/2-repair.svg)
+
+**The local simulation: one test call** (`sim/local.py`)
+
+![The local simulation: one test call](diagrams/3-test-call.svg)
+
+**The local engine: one customer turn** (`sim/engine.py`)
+
+![The local engine: one customer turn](diagrams/4-engine-turn.svg)
+
+**The model-free test** (`fuzz_workflow.py`)
+
+![The model-free test](diagrams/5-model-free.svg)
+
 ## Layout
 
 | Path | What |
@@ -55,7 +75,7 @@ Without `ANTHROPIC_API_KEY` in the environment steps 2 and 4 to 6 are skipped an
 | `local-simulation/cases/CASE-FORMAT.md` | how test customers are written |
 | `kit/build-the-builder/` | the organisers' kit (scorer and runner are used by the local test) |
 | `scripts/run_cases_retry.py` | the kit's runner with network retries (only for `--test-on platform`) |
-| `ARCHITECTURE.md` | diagrams of the builder and of the local simulation engine; updated with every structural change |
+| `ARCHITECTURE.md`, `diagrams/` | the diagrams and the script that draws them (`diagrams/make.py`); updated with every structural change |
 | `submission/`, `traces/` | the exported phone agents and the traces of the runs that made them; see `SUBMISSION.md` |
 
 Nothing in the builder comes from a hidden brief.
