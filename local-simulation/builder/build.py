@@ -22,7 +22,8 @@ from claude_agent_sdk import AssistantMessage, ClaudeAgentOptions, ClaudeSDKClie
 HERE = pathlib.Path(__file__).resolve().parent
 SIM = HERE.parent / "sim" / "local.py"
 KIT = HERE.parent.parent / "kit" / "build-the-builder"
-BUDGET = int(os.environ.get("BUILD_BUDGET_SECONDS", 28 * 60))         # the whole run must stay under 30 minutes
+BUDGET = int(os.environ.get("BUILD_BUDGET_SECONDS", 60 * 60))         # the whole run stays under this (default 60 minutes; the event's rules no longer set a limit, an earlier version of them said 30). --budget-minutes or BUILD_BUDGET_SECONDS=1680 gives the 28-minute run back
+STALE_ROUNDS = 2                                                      # the repair loop also ends after this many rounds in a row that did not beat the best version so far
 REPAIR_NEEDS = 170 + 150                                              # the first repair round is started with this much left (a short turn with checkpoints is worth it)
 AFTER_REPAIR = 170        # re-test (63-112 s measured) + delivery; the model-free test after a repair runs only when there is time for it
 REPAIR_TURN = 270         # one repair turn is at most this long, so that two or three rounds of repair and re-test fit: measured, a re-test tells more than a longer turn (10 -> 20 of 28 after a 98 s turn)
@@ -69,21 +70,68 @@ def workdir(slot):
     return work
 
 
+def to_text(f):
+    """The text of a Word, Excel or PDF file, or None for any other kind. The session reads the .txt copy; the original stays next to it."""
+    ext = f.suffix.lower()
+    try:
+        if ext == ".docx":
+            import docx
+            d = docx.Document(str(f)); out = [p.text for p in d.paragraphs]
+            for t in d.tables: out += ["", *(" | ".join(c.text.strip() for c in r.cells) for r in t.rows)]
+            return "\n".join(out)
+        if ext in (".xlsx", ".xlsm"):
+            import openpyxl
+            wb = openpyxl.load_workbook(str(f), data_only=True); out = []
+            for ws in wb.worksheets:
+                out.append(f"## sheet: {ws.title}")
+                out += [" | ".join("" if c is None else str(c) for c in row) for row in ws.iter_rows(values_only=True) if any(c is not None for c in row)]
+            return "\n".join(out)
+        if ext == ".pdf":
+            import pypdf
+            return "\n\n".join(f"## page {i + 1}\n{pg.extract_text() or ''}" for i, pg in enumerate(pypdf.PdfReader(str(f)).pages))
+        if ext == ".csv": return None
+    except Exception as e: return f"(this file could not be converted to text: {type(e).__name__}: {e}. Read the original with a tool.)"
+    return None
+
+
 def stage(paths, slot, work):
-    """Copy the given documents into out/<slot>/input of the work folder so the run reads nothing outside it."""
+    """Copy the given documents (files, folders, zip files) into out/<slot>/input of the work folder so the run reads nothing outside it.
+    Word, Excel and PDF files also get a .txt copy. BRIEF and README files come first in the list."""
+    import zipfile
     dst = work / "out" / slot / "input"
-    dst.mkdir(parents=True)
+    dst.mkdir(parents=True, exist_ok=True)
     files = []
     for p in map(pathlib.Path, paths):
-        for f in (sorted(x for x in p.rglob("*") if x.is_file()) if p.is_dir() else [p]):
-            shutil.copy(f, dst / f.name); files.append(f"out/{slot}/input/{f.name}")
-    return files
+        if p.is_file() and p.suffix.lower() == ".zip":
+            box = pathlib.Path(tempfile.mkdtemp(prefix="case-")); zipfile.ZipFile(p).extractall(box); p = box
+        for f in (sorted(x for x in p.rglob("*") if x.is_file() and not x.name.startswith(".") and "__MACOSX" not in x.parts) if p.is_dir() else [p]):
+            name = f.name if not (dst / f.name).exists() else f"{f.parent.name}-{f.name}"
+            shutil.copy(f, dst / name); files.append(f"out/{slot}/input/{name}")
+            text = to_text(f)
+            if text is not None: (dst / (name + ".txt")).write_text(text); files.append(f"out/{slot}/input/{name}.txt")
+    first = lambda x: (0 if pathlib.Path(x).stem.upper() == "BRIEF" else 1 if pathlib.Path(x).stem.upper() == "README" else 2)
+    return sorted(files, key=first)
 
 
-def stage_api(path, slot, work):
+def is_tool_api(f):
+    try: return f.suffix.lower() == ".json" and "paths" in json.loads(f.read_text())
+    except Exception: return False
+
+
+def stage_api(path, slot, work, mock=None):
+    """The tool API file of the run: the given one, or the one among the documents. Returns None when there is none: the run then
+    writes it from the service contract in the documents. With a mock address the file's server is that address."""
     dst = work / "out" / slot / "input" / "tool_api.json"
-    shutil.copy(path, dst)
+    found = pathlib.Path(path) if path else next((f for f in sorted((work / "out" / slot / "input").iterdir()) if is_tool_api(f)), None)
+    if not found: return None
+    if found != dst: shutil.copy(found, dst)
+    if mock:
+        api = json.loads(dst.read_text()); api["servers"] = [{"url": mock}]; dst.write_text(json.dumps(api, indent=1))
     return f"out/{slot}/input/tool_api.json"
+
+
+CONTRACT = """The documents of a bank's phone-agent case are in out/{slot}/input ({files}). Word, Excel and PDF files have a .txt copy next to them. Among them is a description of the bank's services (a service contract, an API description, example requests and answers).
+Write out/{slot}/input/tool_api.json: one OpenAPI 3 file with exactly the services the documents describe that a phone agent calls during a call. For each: path, method, every request field with its type, whether it is required and its allowed values, and the answer with every field, the optional ones included, and the error answers. Use the names and values exactly as the documents give them; add nothing they do not say. Put {server} as the only entry of "servers". Check that the file loads with json.load. Then stop."""
 
 
 class Run:
@@ -92,7 +140,9 @@ class Run:
         self.slot = a.slot or pathlib.Path(a.inputs[0]).stem
         self.work = workdir(self.slot)
         self.out = self.work / "out" / self.slot
-        self.briefs, self.api = stage(a.inputs[:-1], self.slot, self.work), stage_api(a.inputs[-1], self.slot, self.work)
+        self.briefs = stage(a.docs, self.slot, self.work)
+        self.api = stage_api(a.api_file, self.slot, self.work, a.mock)
+        self.briefs = [b for b in self.briefs if b != self.api]
         self.trace_path = HERE / "traces" / f"{self.slot}-{time.strftime('%Y%m%d-%H%M%S')}.jsonl"
         self.trace_path.parent.mkdir(exist_ok=True)
         self.trace = self.trace_path.open("w")
@@ -142,6 +192,22 @@ class Run:
                 self.cost["builder_usd"] = max(self.cost["builder_usd"], message.total_cost_usd or 0.0)        # the session reports its running total
                 self.steps.append({"step": label, "seconds": round(time.time() - t), "turns": message.num_turns, "session_usd_so_far": message.total_cost_usd})
                 self.say(f"{label}: {message.num_turns} turns, {time.time() - t:.0f} s")
+
+    # ---- the tool API file, when the case comes with a service contract in prose instead of one
+    async def contract(self):
+        t = time.time()
+        options = ClaudeAgentOptions(cwd=self.work, model=os.environ.get("BUILDER_MODEL", "claude-opus-5-5"), setting_sources=[], allowed_tools=["Read", "Write", "Edit", "Glob", "Grep", "Bash"],
+                                     permission_mode="dontAsk", max_turns=40, env={"CLAUDE_CODE_DISABLE_BACKGROUND_TASKS": "1"})
+        async with ClaudeSDKClient(options=options) as client:
+            await client.query(CONTRACT.format(slot=self.slot, files=", ".join(pathlib.Path(b).name for b in self.briefs), server=json.dumps({"url": self.a.mock or "https://bank.invalid"})))
+            async for message in client.receive_response():
+                self.log(type(message).__name__, step="contract", **dataclasses.asdict(message))
+                if isinstance(message, ResultMessage): self.cost["cases_usd"] += message.total_cost_usd or 0.0
+        dst = self.out / "input" / "tool_api.json"
+        if not is_tool_api(dst): sys.exit("no tool API file was given and none could be written from the documents")
+        self.api = f"out/{self.slot}/input/tool_api.json"
+        self.steps.append({"step": "contract", "seconds": round(time.time() - t), "paths": len(json.loads(dst.read_text())["paths"])})
+        self.say(f"tool API file written from the documents: {self.steps[-1]['paths']} services, {time.time() - t:.0f} s")
 
     # ---- test customers written from the brief alone, while the agent is being built
     async def write_cases(self):
@@ -405,15 +471,17 @@ class Run:
         a, slot = self.a, self.slot
         options = ClaudeAgentOptions(
             cwd=self.work, model=os.environ.get("BUILDER_MODEL", "claude-opus-5-5"), skills=["build-phone-agent"], setting_sources=["project"],      # only this folder's settings
-            allowed_tools=["Read", "Write", "Edit", "Glob", "Grep", "Bash"], permission_mode="dontAsk", max_turns=150,
+            allowed_tools=["Read", "Write", "Edit", "Glob", "Grep", "Bash"], permission_mode="dontAsk", max_turns=600,
             env={"BASH_DEFAULT_TIMEOUT_MS": "300000", "BASH_MAX_TIMEOUT_MS": "600000", "CLAUDE_CODE_DISABLE_BACKGROUND_TASKS": "1"},
         )
         self.started = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+        if not self.api: await self.contract()
         self.log("start", start=self.started, slot=slot, inputs=a.inputs, model=options.model, cases=a.cases)
         writing = asyncio.create_task(self.write_cases()) if (not a.cases and a.write_cases and self.can_check) else None
         async with ClaudeSDKClient(options=options) as client:
             await self.turn(client, f"Use the build-phone-agent skill to build a phone agent. Slot: {slot}. "
-                                    f"Brief documents, in the order they were given: {', '.join(self.briefs)}. Tool API file: {self.api}.", "build")
+                                    f"Brief documents, in reading order: {', '.join(self.briefs)}. Word, Excel and PDF files have a .txt copy; read that. Tool API file: {self.api}."
+                                    + (f" The bank's services run at {a.mock}: the workflow calls this address and no other." if a.mock else ""), "build")
             if not (self.out / "workflow.json").exists(): sys.exit("the build step produced no workflow.json")
             if writing:
                 a.cases = await writing
@@ -426,11 +494,16 @@ class Run:
                     with (self.out / "review.md").open("a") as f: f.write(f"\n## R0 [high] (platform) The platform rejected workflow.json in a dry run\n- Error: {rejected}\n- Suggested fix: change gen.py so the file is accepted.\n")
                 needs = REPAIR_NEEDS_PLATFORM if (a.cases and a.test_on == "platform") else REPAIR_NEEDS
                 fuzz, n_fuzz = await self.fuzz(0, s["folder"] if s else None) if a.fuzz else ("(not run)", 0)
+                best_score, stale = None, 0
                 while not self.dead and self.left() > (needs if rnd == 0 or a.test_on == "platform" else REPAIR_NEEDS_LATER) and rnd < a.max_repairs:
                     tests, n_bad = self.failed_calls(s, rnd) if s else ("", 0)
                     n_bad += n_fuzz                                                  # a defect of the model-free test is repaired like a failed customer
                     findings = json.loads((self.out / "review.json").read_text())
-                    if rnd > 0 and not n_bad: break                                  # everything passes after a repair: stop
+                    if rnd > 0 and not n_bad: self.say("every test customer passes and the model-free test is clean: done"); break
+                    score = (self.versions[-1]["customers_passed"] if self.versions else 0, -n_fuzz)
+                    if best_score is None or score > best_score: best_score, stale = score, 0
+                    else: stale += 1
+                    if stale >= STALE_ROUNDS: self.say(f"{STALE_ROUNDS} repair rounds in a row did not beat the best version ({best_score[0]} customers, {-best_score[1]} model-free groups): done"); break
                     # measured twice: a version whose test customers all pass got worse when it was repaired for reader findings alone (10/10 -> 8/10 on the platform)
                     if rnd == 0 and not n_bad and not rejected and (s or not any(f.get("severity") for f in findings if not f.get("error"))): break
                     rnd += 1
@@ -467,7 +540,7 @@ class Run:
         ids, best = self.deliver()
         self.publish()
         total = round(sum(self.cost.values()), 2)
-        report = {"slot": slot, "model": options.model, "seconds": round(time.time() - self.t0), "usd": total, "cost": {k: round(v, 2) for k, v in self.cost.items()},
+        report = {"slot": slot, "model": options.model, "seconds": round(time.time() - self.t0), "budget_seconds": BUDGET, "usd": total, "cost": {k: round(v, 2) for k, v in self.cost.items()},
                   "billed_to": "api" if os.environ.get("ANTHROPIC_API_KEY") else "subscription", "delivered_round": best["round"] if best else None, "versions": self.versions, "steps": self.steps, **ids}
         (self.out / "build-report.json").write_text(json.dumps(report, indent=1, default=str))
         self.log("done", report=report)
@@ -487,15 +560,21 @@ if __name__ == "__main__":
     ap.add_argument("--slot", help="label of the agent; the same slot updates the same workflow. Default: first brief's file name")
     ap.add_argument("--cases", help="test customers in the kit's case format; without it only the readers check the workflow")
     ap.add_argument("--case-brief", help="use only the cases of this brief letter"); ap.add_argument("--case-level", help="use only cases of these levels, e.g. hard")
-    ap.add_argument("--reps", type=int, default=3); ap.add_argument("--concurrency", type=int, default=30); ap.add_argument("--max-repairs", type=int, default=3)
+    ap.add_argument("--reps", type=int, default=3); ap.add_argument("--concurrency", type=int, default=30); ap.add_argument("--max-repairs", type=int, default=12, help="most repair rounds; the loop ends earlier when everything passes, when two rounds in a row bring nothing, or when the budget is used")
+    ap.add_argument("--budget-minutes", type=float, help="time budget of the whole run in minutes (default 60, or BUILD_BUDGET_SECONDS)")
     ap.add_argument("--test-on", choices=["local", "platform"], default="local", help="where the test customers run: the local simulator, or the Freya platform itself (its engine, models and practice bank)")
     ap.add_argument("--no-write-cases", dest="write_cases", action="store_false", help="without --cases the builder writes its own test customers from the brief; this turns that off")
     ap.add_argument("--no-review", dest="review", action="store_false", help="do not start the four readers")
     ap.add_argument("--no-fuzz", dest="fuzz", action="store_false", help="do not run the model-free test (fuzz_workflow.py)")
     ap.add_argument("--review-severity", default="high", help="which reader findings reach the repair turn, comma separated (high, medium, low)")
     a = ap.parse_args()
-    if len(a.inputs) < 2: sys.exit(__doc__)
-    a.inputs = [str(pathlib.Path(p).resolve()) for p in a.inputs]      # the paths are relative to where the command was started, not to this folder
+    if a.budget_minutes: BUDGET = int(a.budget_minutes * 60)
+    import re as _re
+    a.mock = a.inputs.pop().rstrip("/") if a.inputs and _re.match(r"https?://", a.inputs[-1]) else None      # build.py {case_folder} {mock_url}
+    if not a.inputs or (len(a.inputs) < 2 and not a.mock): sys.exit(__doc__)
+    a.inputs = [str(pathlib.Path(p).resolve()) for p in a.inputs]      # the paths are relative to where the command was
+    a.api_file = a.inputs[-1] if len(a.inputs) > 1 and is_tool_api(pathlib.Path(a.inputs[-1])) else None      # build.py {brief} ... {tool_api.json}
+    a.docs = a.inputs[:-1] if a.api_file else a.inputs
     if a.cases: a.cases = str(pathlib.Path(a.cases).resolve())
     os.chdir(HERE); sys.path.insert(0, str(HERE))
     asyncio.run(Run(a).main())

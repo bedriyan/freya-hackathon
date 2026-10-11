@@ -67,12 +67,14 @@ class Engine:
         return PLACEHOLDER.sub(rep, text)
 
     def flatten(self, prefix, obj):
-        self.vars[prefix] = obj
+        # Measured on the platform (g-a, 11 Oct): only the leaves exist, as strings, under "<step name>_response.<path>"
+        # ("api_acct_response.data.products.0.past_due": "420"). There is no variable that holds the list or the object itself.
         if isinstance(obj, dict):
             for k, v in obj.items(): self.flatten(f"{prefix}.{k}", v)
         elif isinstance(obj, list):
             for i, v in enumerate(obj): self.flatten(f"{prefix}.{i}", v)
         elif isinstance(obj, bool): self.vars[prefix] = "true" if obj else "false"     # booleans from results arrive as strings
+        else: self.vars[prefix] = "null" if obj is None else str(obj)
 
     # ------------------------------------------------------------------ conditions
     @staticmethod
@@ -390,7 +392,7 @@ class Engine:
 
     async def run_tool(self, t, args, owner, node_mapping=None):
         f = t["function"]; name = f["name"]; props = (f.get("parameters") or {}).get("properties") or {}
-        keys = {owner, name}
+        keys = {owner} if node_mapping is not None else {owner, name}      # a step's own call is filed under the step's name (measured: api_acct_response.*, no get_account_response.*)
         if f.get("handler", "").endswith("code_exec"):
             code = (props.get("code") or {}).get("default") or args.get("code") or ""
             self.event(event="function_call_start", function="code_exec", args={"timeout_ms": (props.get("timeout_ms") or {}).get("default"), "code": code})
@@ -442,6 +444,7 @@ class Engine:
             for part in str(m.get("path") or "").split("."):
                 v = v.get(part) if isinstance(v, dict) else (v[int(part)] if isinstance(v, list) and part.isdigit() and int(part) < len(v) else None)
                 if v is None: break
+            if isinstance(v, (list, dict)): continue      # measured on the platform (g-a, 11 Oct): a mapping whose path is a list or an object sets no variable at all; 8 of 10 calls closed as a service error because the code waited for it
             if v is not None: self.vars[m["variable"]] = self.mapped[m["variable"]] = ("true" if v else "false") if isinstance(v, bool) else v
             # Measured on the platform (fy-s01, S01-08, 11 Oct): when a response lacks the path, the variable gets the value that was mapped
             # from an earlier response, even when code has overwritten it in between. A cleared optional field (`hint`) comes back.

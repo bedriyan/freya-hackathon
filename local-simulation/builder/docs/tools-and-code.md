@@ -284,7 +284,7 @@ Each call of the same tool overwrites the previous `_args` and `_response` value
 - A path without the `data.` prefix (for the same body: `ok`) is not confirmed. A smaller example builder uses it. In an early trial call the mapped variables stayed unset and the transitions on them never fired. The mapping paths of that call are not recorded. The builder that passed uses `data.` paths.
 - The flattened key can be used directly as a transition variable: `check_answer_response.data.verified`. Verified in a working builder, which tests the mapped variable and the flattened key in the same OR group as a safeguard.
 - Booleans arrive as strings. The trial call showed `true` in lower case in the flattened keys. Test both `"true"` and `"True"`, or map a string field.
-- A mapped list or object: the exact form it has later inside `vars` is not confirmed. The working builder reads it defensively. It accepts a list, a JSON string, and flattened keys.
+- A mapped list or object sets NO variable (measured on the platform, 11 Oct). Only the leaves exist, as strings, under the name of the step that made the call: `<step name>_response.data.products.0.past_due`. Read lists by walking these keys in the code step.
 
 ## Routing on tool results
 

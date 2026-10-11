@@ -203,5 +203,33 @@
  "fx-s02-own": {
   "workflow_id": "d8bdc8aa-738e-4a43-b3e3-ad88dc03d383",
   "agent_id": "7c5d98b9-84c8-40b0-89e2-8d00c9a5fbc0"
+ },
+ "g-s02": {
+  "workflow_id": "06e3f9a0-2be7-41b4-b5b2-ce7167aefc90",
+  "agent_id": "f2606672-a260-422e-9c3c-8fd72c8a047a"
+ },
+ "g-s04": {
+  "workflow_id": "40ab8522-d378-484d-89b7-78cad4c8b11c",
+  "agent_id": "c7f21928-480b-425f-9136-f23d14c69d21"
+ },
+ "g-a": {
+  "workflow_id": "f610a61f-a1ec-4f25-99fa-d8d755dd583c",
+  "agent_id": "84f8bac7-a5e4-4a12-a970-2abc4ea18ef8"
+ },
+ "g-b": {
+  "workflow_id": "3215606a-1c45-4c07-90ae-f21b7e013ef0",
+  "agent_id": "93a375b9-733f-4f7c-82ee-d9a878bcbd00"
+ },
+ "g-s03": {
+  "workflow_id": "880c9c2f-7b91-44a7-8a4d-c61dda5fc8da",
+  "agent_id": "9ed61cb2-6f07-4e25-934e-72ce300b84f8"
+ },
+ "g-s05": {
+  "workflow_id": "dc7f9c9d-e04c-43ff-b93e-f0c61d08f6d6",
+  "agent_id": "390b9e9a-7e8e-4247-ac47-41adf6fdb1ac"
+ },
+ "g-s02-own": {
+  "workflow_id": "6dfadac0-c837-44c8-8557-9ba9a04362e0",
+  "agent_id": "258d2368-4c08-403a-b4e0-a2e5a5ec6fef"
  }
 }

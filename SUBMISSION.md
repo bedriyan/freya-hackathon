@@ -2,37 +2,34 @@
 
 Participant: Bedirhan Keskin (individual entry). Repository: https://github.com/bedriyan/freya-hackathon
 
-## How the two hidden-brief agents are made
+## How the final agent is made
 
 ```bash
 source kit/build-the-builder/env.sh
-python3 local-simulation/builder/build.py briefs/hidden-1.md briefs/hidden-1.openapi.json --slot hidden-1 2>&1 | tee traces/hidden-1.log
-python3 local-simulation/builder/build.py briefs/hidden-2.md briefs/hidden-2.openapi.json --slot hidden-2 2>&1 | tee traces/hidden-2.log
-cp local-simulation/builder/out/hidden-1/exported.workflow.json submission/hidden-1.workflow.json
-cp local-simulation/builder/out/hidden-2/exported.workflow.json submission/hidden-2.workflow.json
+python3 local-simulation/builder/build.py {case_folder} {mock_url} --slot final 2>&1 | tee traces/final.log
+cp local-simulation/builder/out/final/exported.workflow.json submission/final.workflow.json
+cp local-simulation/builder/out/final/trace.txt traces/final.trace.txt
 ```
 
-`traces/hidden-N.log` is everything the run printed. `traces/hidden-N.trace.txt` is the short trace the builder writes itself
-(start and end time, every model call with its model and purpose, what was created on Freya with the number of steps and tools,
-every test it ran on its own agent with the result). `traces/hidden-N.jsonl` is the full record of the sessions.
+`traces/final.log` is everything the run printed. `traces/final.trace.txt` is the short trace the builder writes itself: start and
+end time, every model call with its model and purpose, what was created on Freya (workflow id, agent id, number of steps and
+tools), and every test it ran on its own agent with the result.
 
-The agents are not edited after the run. Nothing from a hidden brief is written into the builder.
+The agent is not edited after the run. Nothing from the final case is written into the builder.
 
-## Form
+The bank's mock services (Cloudflare Workers) are a separate step from the builder; their source is in `mock/`.
+
+## submission.json
 
 ```json
 {
   "team": "Bedirhan Keskin",
+  "members": [{"name": "Bedirhan Keskin", "email": "bedriyan@gmail.com"}],
   "repo": "https://github.com/bedriyan/freya-hackathon",
   "commit": "<commit>",
-  "run_command": "python3 local-simulation/builder/build.py {brief_path} {tool_api_path}",
-  "workflows": {
-    "hidden-1": "submission/hidden-1.workflow.json",
-    "hidden-2": "submission/hidden-2.workflow.json"
-  },
-  "traces": {
-    "hidden-1": "traces/hidden-1.log",
-    "hidden-2": "traces/hidden-2.log"
-  }
+  "run_command": "python3 local-simulation/builder/build.py {case_folder} {mock_url}",
+  "workflow": "submission/final.workflow.json",
+  "trace": "traces/final.log",
+  "mock_url": "<mock_url>"
 }
 ```

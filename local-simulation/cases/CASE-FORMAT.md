@@ -90,3 +90,7 @@ Give 4 to 6 cases a way of talking (`style`): `pieces` (numbers and dates in two
 ## Before you finish
 
 Go through every case once more against the brief: is the expected outcome the only one the brief allows for this script? If two readings are possible, change the script until only one is. A wrong expectation makes a correct agent fail and misleads the repair.
+
+## The language of the call
+
+The brief says which language the calls are in (English when it does not). The simulated customer speaks only that language. When it is not English, begin every `script` with the sentence "The customer speaks only <language>; every line they say is in <language>." and write every quoted customer line in that language, including numbers, dates and amounts said in words. `checks` stay in English; where a check quotes a sentence the agent must say, quote it in the call's language exactly as the brief gives it.
