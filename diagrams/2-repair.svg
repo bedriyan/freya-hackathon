@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 900" width="1000" height="900" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7d8590"/></marker><marker id="arrow-3fb950" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3fb950"/></marker><marker id="arrow-58a6ff" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#58a6ff"/></marker><marker id="arrow-8b949e" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8b949e"/></marker><marker id="arrow-a371f7" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#a371f7"/></marker><marker id="arrow-d29922" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#d29922"/></marker><marker id="arrow-f0883e" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#f0883e"/></marker><marker id="arrow-f85149" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#f85149"/></marker></defs>
+<rect width="1000" height="900" rx="16" fill="#0d1117"/><rect x="0.5" y="0.5" width="999" height="899" rx="16" fill="none" stroke="#30363d"/>
+<text x="32" y="42" font-size="20" font-weight="700" fill="#e6edf3">The repair loop and its checkpoints</text>
+<text x="32" y="64" font-size="13" fill="#9da7b3">A repair turn is short because a re-test tells more than a longer turn. No fixed number of rounds.</text>
+<rect x="560" y="110" width="392" height="600" rx="14" fill="#ffffff" fill-opacity="0.025" stroke="#3fb950" stroke-width="1.2" stroke-dasharray="5 5"/><rect x="578" y="99" width="353.8" height="22" rx="11" fill="#0d1117" stroke="#3fb950" stroke-width="1.2"/><text x="754.9" y="114" text-anchor="middle" font-size="11" font-weight="600" letter-spacing="0.8" fill="#e6edf3">checkpoint.py · AFTER EVERY FIX · NO MODEL</text>
+<path d="M280.0,161.0 L280.0,191.0" fill="none" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arrow)"/>
+<path d="M280.0,293.0 L280.0,337.0" fill="none" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arrow)"/>
+<path d="M280.0,405.0 L280.0,433.0" fill="none" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arrow)"/>
+<path d="M280.0,535.0 L280.0,577.0" fill="none" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arrow)"/>
+<path d="M280.0,654.0 L280.0,689.0" fill="none" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arrow)"/>
+<path d="M110.0,724.5 L72.0,721.7 Q62,721 62.0,711.0 L62.0,135.0 Q62,125 72.0,125.7 L107.0,128.3" fill="none" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arrow)"/>
+<path d="M450.0,243.5 L478.0,246.1 Q488,247 488.0,257.0 L488.0,809.0 Q488,819 478.0,819.9 L453.0,822.2" fill="none" stroke="#d29922" stroke-width="1.5" marker-end="url(#arrow-d29922)"/>
+<path d="M450.0,631.0 L466.0,631.0 Q476,631 476.0,641.0 L476.0,797.0 Q476,807 466.1,808.3 L453.0,810.1" fill="none" stroke="#7d8590" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+<path d="M756.0,211.0 L756.0,237.0" fill="none" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arrow)"/>
+<path d="M756.0,305.0 L756.0,331.0" fill="none" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arrow)"/>
+<path d="M756.0,399.0 L756.0,425.0" fill="none" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arrow)"/>
+<path d="M756.0,493.0 L756.0,525.0" fill="none" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arrow)"/>
+<path d="M686.0,572.0 L686.0,586.0 Q686.0,595.0 677.0,595.0 L677.0,595.0 Q668.0,595.0 668.0,604.0 L668.0,615.0" fill="none" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arrow)"/>
+<path d="M826.0,572.0 L826.0,586.0 Q826.0,595.0 835.0,595.0 L835.0,595.0 Q844.0,595.0 844.0,604.0 L844.0,615.0" fill="none" stroke="#7d8590" stroke-width="1.5" marker-end="url(#arrow)"/>
+<path d="M450.0,485.5 L557.0,485.0" fill="none" stroke="#3fb950" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrow-3fb950)"/>
+<rect x="110" y="96" width="340" height="65" rx="10" fill="#161b22"/><rect x="110" y="96" width="340" height="65" rx="10" fill="#58a6ff" fill-opacity="0.13" stroke="#58a6ff" stroke-width="1.5"/>
+<text x="280.0" y="125.0" text-anchor="middle" font-size="14" font-weight="600" fill="#e6edf3">Test round N is scored</text>
+<text x="280.0" y="144.0" text-anchor="middle" font-size="12" fill="#9da7b3">failed customers + model-free defect groups</text>
+<rect x="110" y="194" width="340" height="99" rx="10" fill="#161b22"/><rect x="110" y="194" width="340" height="99" rx="10" fill="#d29922" fill-opacity="0.13" stroke="#d29922" stroke-width="1.5"/>
+<text x="280.0" y="223.0" text-anchor="middle" font-size="14" font-weight="600" fill="#e6edf3">Stop here?</text>
+<text x="280.0" y="242.0" text-anchor="middle" font-size="12" fill="#9da7b3">every customer passes × 3, model-free clean</text>
+<text x="280.0" y="259.0" text-anchor="middle" font-size="12" fill="#9da7b3">2 rounds in a row without gain</text>
+<text x="280.0" y="276.0" text-anchor="middle" font-size="12" fill="#9da7b3">no budget for a round (320 s first, 290 s later)</text>
+<rect x="110" y="340" width="340" height="65" rx="10" fill="#161b22"/><rect x="110" y="340" width="340" height="65" rx="10" fill="#3fb950" fill-opacity="0.13" stroke="#3fb950" stroke-width="1.5"/>
+<text x="280.0" y="369.0" text-anchor="middle" font-size="14" font-weight="600" fill="#e6edf3">Baseline checkpoint</text>
+<text x="280.0" y="388.0" text-anchor="middle" font-size="12" fill="#9da7b3">the level a fix must not fall below</text>
+<rect x="110" y="436" width="340" height="99" rx="10" fill="#161b22"/><rect x="110" y="436" width="340" height="99" rx="10" fill="#a371f7" fill-opacity="0.13" stroke="#a371f7" stroke-width="1.5"/>
+<text x="280.0" y="465.0" text-anchor="middle" font-size="14" font-weight="600" fill="#e6edf3">Repair turn, at most 270 s</text>
+<text x="280.0" y="484.0" text-anchor="middle" font-size="12" fill="#9da7b3">the same build session</text>
+<text x="280.0" y="501.0" text-anchor="middle" font-size="12" fill="#9da7b3">reads tests-N.md and fuzz-N.md</text>
+<text x="280.0" y="518.0" text-anchor="middle" font-size="12" fill="#9da7b3">one fix in gen.py → checkpoint → next fix</text>
+<rect x="110" y="580" width="340" height="74" rx="10" fill="#161b22"/><rect x="110" y="580" width="340" height="74" rx="10" fill="#3fb950" fill-opacity="0.13" stroke="#3fb950" stroke-width="1.5"/>
+<text x="280.0" y="605.0" text-anchor="middle" font-size="14" font-weight="600" fill="#e6edf3">Take the LAST CHECKPOINT</text>
+<text x="280.0" y="624.0" text-anchor="middle" font-size="12" fill="#9da7b3">not the files as the turn left them:</text>
+<text x="280.0" y="641.0" text-anchor="middle" font-size="12" fill="#9da7b3">a turn cut off by the clock loses nothing</text>
+<rect x="110" y="692" width="340" height="65" rx="10" fill="#161b22"/><rect x="110" y="692" width="340" height="65" rx="10" fill="#58a6ff" fill-opacity="0.13" stroke="#58a6ff" stroke-width="1.5"/>
+<text x="280.0" y="721.0" text-anchor="middle" font-size="14" font-weight="600" fill="#e6edf3">Test round N+1</text>
+<text x="280.0" y="740.0" text-anchor="middle" font-size="12" fill="#9da7b3">local simulator × 3, then the model-free test</text>
+<rect x="110" y="790" width="340" height="65" rx="10" fill="#161b22"/><rect x="110" y="790" width="340" height="65" rx="10" fill="#f0883e" fill-opacity="0.13" stroke="#f0883e" stroke-width="1.5"/>
+<text x="280.0" y="819.0" text-anchor="middle" font-size="14" font-weight="600" fill="#e6edf3">Deliver the best round</text>
+<text x="280.0" y="838.0" text-anchor="middle" font-size="12" fill="#9da7b3">most customers, then fewest model-free groups</text>
+<rect x="590" y="146" width="332" height="65" rx="10" fill="#161b22"/><rect x="590" y="146" width="332" height="65" rx="10" fill="#3fb950" fill-opacity="0.13" stroke="#3fb950" stroke-width="1.5"/>
+<text x="756.0" y="175.0" text-anchor="middle" font-size="14" font-weight="600" fill="#e6edf3">Run gen.py</text>
+<text x="756.0" y="194.0" text-anchor="middle" font-size="12" fill="#9da7b3">writes workflow.json</text>
+<rect x="590" y="240" width="332" height="65" rx="10" fill="#161b22"/><rect x="590" y="240" width="332" height="65" rx="10" fill="#3fb950" fill-opacity="0.13" stroke="#3fb950" stroke-width="1.5"/>
+<text x="756.0" y="269.0" text-anchor="middle" font-size="14" font-weight="600" fill="#e6edf3">check_workflow.py</text>
+<text x="756.0" y="288.0" text-anchor="middle" font-size="12" fill="#9da7b3">static check of the file</text>
+<rect x="590" y="334" width="332" height="65" rx="10" fill="#161b22"/><rect x="590" y="334" width="332" height="65" rx="10" fill="#3fb950" fill-opacity="0.13" stroke="#3fb950" stroke-width="1.5"/>
+<text x="756.0" y="363.0" text-anchor="middle" font-size="14" font-weight="600" fill="#e6edf3">selftest.py</text>
+<text x="756.0" y="382.0" text-anchor="middle" font-size="12" fill="#9da7b3">unit tests of the brief's rules</text>
+<rect x="590" y="428" width="332" height="65" rx="10" fill="#161b22"/><rect x="590" y="428" width="332" height="65" rx="10" fill="#3fb950" fill-opacity="0.13" stroke="#3fb950" stroke-width="1.5"/>
+<text x="756.0" y="457.0" text-anchor="middle" font-size="14" font-weight="600" fill="#e6edf3">60 random calls + replay</text>
+<text x="756.0" y="476.0" text-anchor="middle" font-size="12" fill="#9da7b3">the recorded calls that passed must still pass</text>
+<rect x="610" y="528" width="292" height="44" rx="22.0" fill="#161b22"/><rect x="610" y="528" width="292" height="44" rx="22.0" fill="#d29922" fill-opacity="0.13" stroke="#d29922" stroke-width="1.5"/>
+<text x="756.0" y="555.0" text-anchor="middle" font-size="14" font-weight="600" fill="#e6edf3">Worse than the last checkpoint?</text>
+<rect x="590" y="618" width="156" height="65" rx="10" fill="#161b22"/><rect x="590" y="618" width="156" height="65" rx="10" fill="#3fb950" fill-opacity="0.13" stroke="#3fb950" stroke-width="1.5"/>
+<text x="668.0" y="647.0" text-anchor="middle" font-size="14" font-weight="600" fill="#e6edf3">SAVED</text>
+<text x="668.0" y="666.0" text-anchor="middle" font-size="12" fill="#9da7b3">copied to ckpt/</text>
+<rect x="766" y="618" width="156" height="65" rx="10" fill="#161b22"/><rect x="766" y="618" width="156" height="65" rx="10" fill="#f85149" fill-opacity="0.13" stroke="#f85149" stroke-width="1.5"/>
+<text x="844.0" y="647.0" text-anchor="middle" font-size="14" font-weight="600" fill="#e6edf3">NOT SAVED</text>
+<text x="844.0" y="666.0" text-anchor="middle" font-size="12" fill="#9da7b3">fix it, or undo</text>
+<rect x="266.9" y="305.0" width="26.2" height="20" rx="10" fill="#0d1117" stroke="#30363d"/><text x="280.0" y="319.0" text-anchor="middle" font-size="11" fill="#e6edf3">no</text>
+<rect x="224.2" y="661.5" width="111.6" height="20" rx="10" fill="#0d1117" stroke="#30363d"/><text x="280.0" y="675.5" text-anchor="middle" font-size="11" fill="#e6edf3">workflow changed</text>
+<rect x="24.5" y="410.0" width="75.0" height="20" rx="10" fill="#0d1117" stroke="#30363d"/><text x="62.0" y="424.0" text-anchor="middle" font-size="11" fill="#e6edf3">next round</text>
+<rect x="471.9" y="370.0" width="32.3" height="20" rx="10" fill="#0d1117" stroke="#30363d"/><text x="488.0" y="384.0" text-anchor="middle" font-size="11" fill="#e6edf3">yes</text>
+<rect x="421.1" y="663.0" width="129.9" height="20" rx="10" fill="#0d1117" stroke="#30363d"/><text x="486.0" y="677.0" text-anchor="middle" font-size="11" fill="#e6edf3">nothing new to test</text>
+<rect x="654.9" y="584.0" width="26.2" height="20" rx="10" fill="#0d1117" stroke="#30363d"/><text x="668.0" y="598.0" text-anchor="middle" font-size="11" fill="#e6edf3">no</text>
+<rect x="827.9" y="584.0" width="32.3" height="20" rx="10" fill="#0d1117" stroke="#30363d"/><text x="844.0" y="598.0" text-anchor="middle" font-size="11" fill="#e6edf3">yes</text>
+<rect x="453.8" y="475.3" width="99.4" height="20" rx="10" fill="#0d1117" stroke="#30363d"/><text x="503.5" y="489.3" text-anchor="middle" font-size="11" fill="#e6edf3">after each fix</text>
+<text x="756" y="760" text-anchor="middle" font-size="12" fill="#9da7b3">What is tested and delivered after a turn is the last SAVED checkpoint.</text>
+<text x="756" y="780" text-anchor="middle" font-size="12" fill="#9da7b3">Every tested round is kept as workflow.rN.json: a repair that made</text>
+<text x="756" y="797" text-anchor="middle" font-size="12" fill="#9da7b3">things worse costs nothing, the earlier round is delivered.</text>
+<rect x="32" y="866" width="12" height="12" rx="3" fill="#a371f7" fill-opacity="0.25" stroke="#a371f7" stroke-width="1.5"/><text x="50" y="877" font-size="11" fill="#9da7b3">Claude session or model role</text>
+<rect x="240.0" y="866" width="12" height="12" rx="3" fill="#3fb950" fill-opacity="0.25" stroke="#3fb950" stroke-width="1.5"/><text x="258.0" y="877" font-size="11" fill="#9da7b3">plain Python, no model</text>
+<rect x="412.0" y="866" width="12" height="12" rx="3" fill="#58a6ff" fill-opacity="0.25" stroke="#58a6ff" stroke-width="1.5"/><text x="430.0" y="877" font-size="11" fill="#9da7b3">simulation / test round</text>
+<rect x="590.0" y="866" width="12" height="12" rx="3" fill="#f0883e" fill-opacity="0.25" stroke="#f0883e" stroke-width="1.5"/><text x="608.0" y="877" font-size="11" fill="#9da7b3">Freya platform</text>
+<rect x="714.0" y="866" width="12" height="12" rx="3" fill="#d29922" fill-opacity="0.25" stroke="#d29922" stroke-width="1.5"/><text x="732.0" y="877" font-size="11" fill="#9da7b3">decision</text>
+</svg>
