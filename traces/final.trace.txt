@@ -1,0 +1,31 @@
+Builder run, slot final-70
+start 2026-10-11T21:26:14+0300
+end   2026-10-11T21:55:38  (1764 s = 29.4 min)
+time budget of the run: 4200 s (the repair loop ends when every test customer passes and the model-free test is clean, when four rounds in a row bring nothing, or when nine tenths of the budget are used; every repair round is followed by the full test)
+command: python3 builder/build.py case https://freya-statement-mock.bedriyan.workers.dev --slot final-70
+
+Steps, in the order they ended (seconds are the step's own duration; the test customers are written while the agent is built):
+- contract: {"seconds": 85, "paths": 7}
+- model call, claude-opus-5-5: write test customers from the brief alone, in a separate session that never sees the agent. 28 customers, 473 s.
+- model call, claude-opus-5-5 (Claude Agent SDK session, 38 turns): read the brief, write the rule list (rules.md), the generator (gen.py), its unit tests (selftest.py) and the workflow. 905 s.
+- test on the builder's own agent, round 0: 84 simulated calls in the local copy of the engine (28 customers x 3). Model calls: agent claude-haiku-5-5 (plays the platform's agent model), customer claude-sonnet-5-5, judge claude-sonnet-5-5. Result 25 / 28 customers with all runs passing. 156 s.
+- model-free test, round 0: 0 runs of the workflow without any model (random calls, stuck customers, recorded calls replayed with one disturbance). 0 defect groups. 1 s.
+- model call, claude-opus-5-5 (same session, 9 turns): repair gen.py from the failed test calls and the model-free findings, one fix at a time with a checkpoint after each (3 checkpoints). 70 s.
+- test on the builder's own agent, round 1: 84 simulated calls in the local copy of the engine (28 customers x 3). Model calls: agent claude-haiku-5-5 (plays the platform's agent model), customer claude-sonnet-5-5, judge claude-sonnet-5-5. Result 26 / 28 customers with all runs passing. 152 s.
+- model-free test, round 1: 0 runs of the workflow without any model (random calls, stuck customers, recorded calls replayed with one disturbance). 0 defect groups. 0 s.
+- model call, claude-opus-5-5 (same session, 6 turns): repair gen.py from the failed test calls and the model-free findings, one fix at a time with a checkpoint after each (1 checkpoints). 42 s.
+- test on the builder's own agent, round 2: 84 simulated calls in the local copy of the engine (28 customers x 3). Model calls: agent claude-haiku-5-5 (plays the platform's agent model), customer claude-sonnet-5-5, judge claude-sonnet-5-5. Result 25 / 28 customers with all runs passing. 141 s.
+- model-free test, round 2: 0 runs of the workflow without any model (random calls, stuck customers, recorded calls replayed with one disturbance). 0 defect groups. 0 s.
+- model call, claude-opus-5-5 (same session, 5 turns): repair gen.py from the failed test calls and the model-free findings, one fix at a time with a checkpoint after each (1 checkpoints). 42 s.
+- test on the builder's own agent, round 3: 84 simulated calls in the local copy of the engine (28 customers x 3). Model calls: agent claude-haiku-5-5 (plays the platform's agent model), customer claude-sonnet-5-5, judge claude-sonnet-5-5. Result 27 / 28 customers with all runs passing. 143 s.
+- model-free test, round 3: 0 runs of the workflow without any model (random calls, stuck customers, recorded calls replayed with one disturbance). 0 defect groups. 0 s.
+- model call, claude-opus-5-5 (same session, 3 turns): repair gen.py from the failed test calls and the model-free findings, one fix at a time with a checkpoint after each (1 checkpoints). 18 s.
+
+On Freya:
+- POST /api/v2/workflow?dryRun=true: asked whether the platform accepts the workflow file (nothing saved).
+- workflow 43efd220-a81b-45bc-9f71-ab05e67677ac (agent d21eb4f2-dae2-4696-ab3e-6cea90c31487) saved in slot final-70 and published; exported to exported.workflow.json. The workflow has 31 steps, 7 tools (cards.balance, cards.list, contact.email.get, statement.pdf.send, statement.week.change, statement.week.decide, statement.week.get).
+- No simulation was started on Freya by this run.
+
+Delivered: round 3 of round 0: 25/28, round 1: 26/28, round 2: 25/28, round 3: 27/28.
+Cost at API prices: $17.27 ({"builder_usd": 7.04, "cases_usd": 2.66, "review_usd": 0.0, "tests_usd": 7.56}).
+The full trace with every message and tool call of the sessions is the JSON-lines file of the same run.
