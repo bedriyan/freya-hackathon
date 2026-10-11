@@ -40,10 +40,24 @@ def _usd(model, u):
     return ((u.input_tokens or 0) * p[0] + (u.output_tokens or 0) * p[1] + (getattr(u, "cache_read_input_tokens", 0) or 0) * p[2] + (getattr(u, "cache_creation_input_tokens", 0) or 0) * p[3]) / 1e6
 
 
+DOC_LIMIT = 60000        # characters of one brief document given to a reader or to check_rules; a longer one (a data file) is cut here
+
+
+def doc_text(f):
+    """The text of one brief document, or None for a file that is not text (a PDF, Word or Excel file: its .txt copy is in the list too)."""
+    raw = pathlib.Path(f).read_bytes()
+    if b"\x00" in raw[:4000]: return None
+    try: text = raw.decode("utf-8")
+    except UnicodeDecodeError: return None
+    if len(text) > DOC_LIMIT: text = text[:DOC_LIMIT] + f"\n\n(This file is {len(text)} characters long; only its beginning is shown here.)"
+    return text
+
+
 def _documents(slot_dir, brief_files, api_file):
+    brief_files = [f for f in brief_files if doc_text(f) is not None]
     part = lambda title, text: f"<document name=\"{title}\">\n{text}\n</document>"
     docs = [part("platform documentation: " + f, (HERE / "docs" / f).read_text()) for f in ("workflow-format.md", "tools-and-code.md")]
-    docs += [part("brief: " + pathlib.Path(f).name + (" (later documents override earlier ones)" if len(brief_files) > 1 else ""), pathlib.Path(f).read_text()) for f in brief_files]
+    docs += [part("brief: " + pathlib.Path(f).name + (" (later documents override earlier ones)" if len(brief_files) > 1 else ""), doc_text(f)) for f in brief_files]
     docs.append(part("tool API file", pathlib.Path(api_file).read_text()))
     docs.append(part("the generated workflow", (slot_dir / "workflow.json").read_text()))
     return "\n\n".join(docs)

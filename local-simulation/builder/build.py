@@ -382,7 +382,8 @@ class Run:
         try:
             import check_rules
             wfj = json.loads((self.out / "workflow.json").read_text())
-            miss = check_rules.check([(self.work / b).read_text() for b in self.briefs], (self.out / "rules.md").read_text(), wfj)
+            import review
+            miss = check_rules.check([t for t in (review.doc_text(self.work / b) for b in self.briefs) if t is not None], (self.out / "rules.md").read_text(), wfj)
             if miss: extra += ["", "## Brief items not found (words, not meaning: an item can be an example, or replaced by a later document; add what is a rule)"] + [f"- not in {where}: {k}: {show}" for k, show, where in miss]
             kinds["BRIEF_ITEMS_NOT_FOUND"] = len(miss)
         except Exception as e: extra += ["", f"## check_rules did not run: {type(e).__name__}: {str(e)[:200]}"]
