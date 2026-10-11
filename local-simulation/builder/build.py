@@ -143,7 +143,7 @@ class Run:
         self.out = self.work / "out" / self.slot
         self.briefs = stage(a.docs, self.slot, self.work)
         self.api = stage_api(a.api_file, self.slot, self.work, a.mock)
-        self.briefs = [b for b in self.briefs if b != self.api]
+        self.briefs = [b for b in self.briefs if b != self.api and not is_tool_api(self.work / b)]      # the tool API file is not a brief document, whatever its name in the folder
         self.trace_path = HERE / "traces" / f"{self.slot}-{time.strftime('%Y%m%d-%H%M%S')}.jsonl"
         self.trace_path.parent.mkdir(exist_ok=True)
         self.trace = self.trace_path.open("w")
@@ -537,6 +537,10 @@ class Run:
                     s = await self.test(rnd)                                         # every repair round is followed by the full test with simulated customers, then the model-free test
                     if a.fuzz and self.left() > REPAIR_NEEDS_LATER + 150: fuzz, n_fuzz = await self.fuzz(rnd, s["folder"])      # only when a further repair round can still use its findings
                     elif a.fuzz: self.say(f"model-free test {rnd}: skipped, {self.left():.0f} s left"); n_fuzz = 0
+                else:
+                    if rnd == 0: self.say(f"no repair round: {self.left():.0f} s of the budget are left")
+                    elif rnd >= a.max_repairs: self.say(f"{rnd} repair rounds: the most that --max-repairs allows")
+                    else: self.say(f"no further repair round: {self.left():.0f} s of the budget are left (no round starts in its last tenth)")
             else:
                 self.say("no ANTHROPIC_API_KEY: review and tests skipped")
         ids, best = self.deliver()
@@ -548,7 +552,7 @@ class Run:
         self.log("done", report=report)
         try:
             import trace_text
-            (self.out / "trace.txt").write_text(trace_text.text(self.started, report, a.inputs, workflow=self.out / "workflow.json"))
+            (self.out / "trace.txt").write_text(trace_text.text(self.started, report, a.inputs + ([a.mock] if a.mock else []) + ["--slot", slot], workflow=self.out / "workflow.json"))
         except Exception as e: self.say(f"trace.txt not written ({type(e).__name__}: {e})")
         self.publish()
         print(f"\ndone: {report['seconds']} s, ${total:.2f} at API prices (builder {self.cost['builder_usd']:.2f}, readers {self.cost['review_usd']:.2f}, tests {self.cost['tests_usd']:.2f})."

@@ -26,7 +26,7 @@ def text(start, report, inputs, cases_model="claude-opus-5-5", sim=("claude-haik
     t0 = time.mktime(time.strptime(start[:19], "%Y-%m-%dT%H:%M:%S"))
     at = lambda s: time.strftime("%H:%M:%S", time.localtime(t0 + s))
     L = [f"Builder run, slot {report['slot']}", f"start {start}", f"end   {time.strftime('%Y-%m-%dT%H:%M:%S', time.localtime(t0 + report['seconds']))}  ({report['seconds']} s = {report['seconds'] / 60:.1f} min)",
-         f"time budget of the run: {report.get('budget_seconds', '?')} s (the repair loop ends when every test customer passes and the model-free test is clean, when four rounds in a row bring nothing, or when nine tenths of the budget are used; every repair round is followed by the full test)", f"command: python3 builder/build.py {' '.join(pathlib.Path(str(i)).name for i in inputs)}", "", "Steps, in the order they ended (seconds are the step's own duration; the test customers are written while the agent is built):"]
+         f"time budget of the run: {report.get('budget_seconds', '?')} s (the repair loop ends when every test customer passes and the model-free test is clean, when four rounds in a row bring nothing, or when nine tenths of the budget are used; every repair round is followed by the full test)", f"command: python3 builder/build.py {' '.join(str(i) if str(i).startswith(('http', '--')) else pathlib.Path(str(i)).name for i in inputs)}", "", "Steps, in the order they ended (seconds are the step's own duration; the test customers are written while the agent is built):"]
     for s in report["steps"]:
         k, sec = s["step"], s.get("seconds")
         if k == "cases": L.append(f"- model call, {cases_model}: {PURPOSE['cases']}. {s.get('cases')} customers, {sec} s.")
