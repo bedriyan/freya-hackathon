@@ -355,7 +355,7 @@ class Engine:
 
     def _run_code(self, code, env, what):
         before = dict(self.vars)
-        try: exec(code, {"__builtins__": __builtins__, **env})
+        try: exec(as_function(code), {"__builtins__": __builtins__, **env})
         except Exception as e:
             self.event(event="error", message=f"{what} raised {type(e).__name__}: {e}"); return e
         finally:
@@ -447,6 +447,19 @@ class Engine:
             # from an earlier response, even when code has overwritten it in between. A cleared optional field (`hint`) comes back.
             elif m["variable"] in self.mapped: self.vars[m["variable"]] = self.mapped[m["variable"]]
         return res
+
+
+def as_function(code):
+    """The platform runs a code step inside a function, not at module level (measured, fx-s01 on 11 Oct: a top-level `st = {}` and a
+    `global st` in a function were two different objects there, so the saved state lost every key the `global` function had set and
+    27 of 30 calls failed; at module level the same code is right). Same here, so that the local tests see it."""
+    import ast
+    try:
+        tree = ast.parse(code)
+        fn = ast.FunctionDef(name="__code_step", args=ast.arguments(posonlyargs=[], args=[], kwonlyargs=[], kw_defaults=[], defaults=[]), body=tree.body or [ast.Pass()], decorator_list=[])
+        call = ast.Expr(ast.Call(func=ast.Name(id="__code_step", ctx=ast.Load()), args=[], keywords=[]))
+        return compile(ast.fix_missing_locations(ast.Module(body=[fn, call], type_ignores=[])), "<code step>", "exec")
+    except SyntaxError: return code                                   # let exec report it as before
 
 
 def parse_json(text):
