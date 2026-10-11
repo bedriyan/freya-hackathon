@@ -3,10 +3,26 @@
 One command reads a bank's brief and its tool API file and creates a Freya phone agent (a workflow), with no manual step.
 
 ```bash
-pip install -r requirements.txt            # Python 3.10+; the Claude Agent SDK also needs the `claude` CLI on PATH
-source kit/build-the-builder/env.sh        # FREYA_API_KEY, FREYA_API_URL, FREYA_BANK_TEAM_KEY, ANTHROPIC_API_KEY (copy env.example)
-python3 local-simulation/builder/build.py {case_folder} {mock_url} --slot <name>
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt            # Python 3.10+; the Claude Agent SDK also needs the `claude` CLI on PATH (npm install -g @anthropic-ai/claude-code)
+cp env.example env.sh                      # fill in FREYA_API_KEY and ANTHROPIC_API_KEY, then:
+source env.sh
+python3 local-simulation/builder/build.py {case_folder} {mock_url}
 ```
+
+**What you need to run it.** Two keys, both your own, set in the environment; none is stored in this repository:
+
+| Variable | What for |
+|---|---|
+| `FREYA_API_KEY`, `FREYA_API_URL` | the workspace the phone agent is saved to and exported from |
+| `ANTHROPIC_API_KEY` | every model call of the builder: building and repairing the agent, writing the test customers, playing the test calls |
+
+Nothing else has to be started. The test calls run inside the same process against a local copy of the platform's engine and
+of the bank's services (`local-simulation/sim/`); no server, port or tunnel is opened. The only service outside the builder is
+the bank's mock on Cloudflare Workers, which the rules ask for as a separate step: it is already deployed at the `{mock_url}`
+named in `submission.json`, and the builder only writes that address into the agent's tools. A run on a case of this size costs
+about 10 to 30 USD of Anthropic API credits. `--slot <name>` names the agent (default: the case folder's name); a second run
+with the same name updates the same workflow.
 
 The case can be a folder or a zip file with Markdown, Word, Excel and PDF documents (the last three are also given to the builder as
 text), or single brief files. `{mock_url}` is the address the bank's services run at; the agent calls this address and no other.

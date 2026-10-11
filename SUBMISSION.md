@@ -5,7 +5,7 @@ Participant: Bedirhan Keskin (individual entry). Repository: https://github.com/
 ## How the final agent is made
 
 ```bash
-source kit/build-the-builder/env.sh
+source env.sh                              # FREYA_API_KEY, FREYA_API_URL, ANTHROPIC_API_KEY: see env.example and the README
 python3 local-simulation/builder/build.py {case_folder} {mock_url} --slot final 2>&1 | tee traces/final.log
 cp local-simulation/builder/out/final/exported.workflow.json submission/final.workflow.json
 cp local-simulation/builder/out/final/trace.txt traces/final.trace.txt
