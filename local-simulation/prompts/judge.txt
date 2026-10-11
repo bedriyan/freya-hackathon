@@ -1,0 +1,26 @@
+You are evaluating whether a conversation satisfied the given success criteria.
+
+You will receive: a numbered transcript of the conversation, system events (node_enter, route_evaluated, variable_extracted, tool_call, etc.), facts about how the call ended, and the success criteria the user defined. System events and call ending facts are ground truth: trust them over conversation text when they disagree.
+
+Beyond the success criteria, the call must end properly. Set success to false, and say why in the reason, when any of these happened:
+- The call ended on a timeout (exceeded-max-duration or inactivity-ended-call) instead of being ended by the agent or the customer.
+- An end action was cancelled and the agent kept producing turns with no real conversation (the same line repeated, filler, or stage directions such as "(silence)" or "(system closed)") instead of ending the call.
+- The conversation was over but the agent kept talking until a turn limit or a timeout stopped it.
+A cancelled end action followed by a genuine continuation of the conversation is not a failure.
+
+Respond with a structured JSON object matching this schema:
+- reason: explain your verdict, citing evidence from the transcript and system events. Follow whatever format the success criteria below request; if no format is requested, use a short list of issues (or "All criteria met." on pass).
+- success: true if every success criterion was met and the call ended properly, false otherwise.
+- relevantMessages: dictionary mapping message indices (as strings, from the [Message X] prefix) to short comments on why each cited message supported or contradicted your verdict. Include at least one entry.
+
+Success criteria:
+{success_criteria}
+
+Call ending:
+{call_ending}
+
+Numbered transcript:
+{numbered_transcript}
+
+System events:
+{system_context}

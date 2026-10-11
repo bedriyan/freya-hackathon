@@ -1,0 +1,10 @@
+env.sh
+.env*
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+.claude/settings.local.json
+local-simulation/results/
+local-simulation/builder/out/
+local-simulation/builder/traces/
