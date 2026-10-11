@@ -94,6 +94,6 @@ The same diagrams with more text are in [ARCHITECTURE.md](ARCHITECTURE.md).
 | `kit/build-the-builder/` | the organisers' kit (scorer and runner are used by the local test) |
 | `scripts/run_cases_retry.py` | the kit's runner with network retries (only for `--test-on platform`) |
 | `ARCHITECTURE.md`, `diagrams/` | the diagrams and the script that draws them (`diagrams/make.py`); updated with every structural change |
-| `submission/`, `traces/` | the exported phone agents and the traces of the runs that made them; see `SUBMISSION.md` |
+| `submission/`, `traces/` | the exported phone agents and the traces of the runs that made them |
 
 Nothing in the builder comes from a hidden brief.
