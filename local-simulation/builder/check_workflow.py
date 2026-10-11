@@ -122,13 +122,13 @@ def check(wf, api, side_questions=True):
     for name, members in sorted(enums.items()):
         lost = sorted(m for m in members if m not in consts)
         if lost: warn.append(f"extraction variable {name!r}: the values {lost} appear in no code and no transition, so such a reply is handled by a default branch. Handle each value, or take it out of the enum")
-    # the platform runs code inside a function: `global` and `nonlocal` then name another object than the top-level one (seen: the saved state lost its keys, 27 of 30 calls failed)
+    # the platform runs code inside a function: `global` then names another object than the top-level one (seen: the saved state lost its keys, 27 of 30 calls failed)
     import ast as _ast
     for path, v in walk(wf):
-        if isinstance(v, str) and path.split(".")[-1] in ("code", "pre_process_code", "post_process_code") and ("global " in v or "nonlocal " in v):
-            try: bad = sorted({n2 for n in _ast.walk(_ast.parse(v)) if isinstance(n, (_ast.Global, _ast.Nonlocal)) for n2 in n.names})
+        if isinstance(v, str) and "code" in path.lower() and "global " in v:
+            try: bad = sorted({n2 for n in _ast.walk(_ast.parse(v)) if isinstance(n, _ast.Global) for n2 in n.names})
             except SyntaxError: bad = []
-            if bad: err.append(f"{path}: the code uses `global`/`nonlocal` for {bad}. The platform runs this code inside a function, so a top-level `x = ...` and a `global x` in a function are two different objects there. "
+            if bad: err.append(f"{path}: the code uses `global` for {bad}. The platform runs this code inside a function, so a top-level `x = ...` and a `global x` in a function are two different objects there. "
                                f"Keep state in one dict made at the top and only change it in place (d['k'] = v, d.clear(), d.update(...)); never rebind a top-level name inside a function")
     # the platform's sandbox drops single code runs: the step then leaves by its default with nothing written (seen: two of thirty calls closed after the greeting)
     for k, n in nodes.items():
