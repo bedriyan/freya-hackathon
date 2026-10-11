@@ -67,14 +67,14 @@ class Engine:
         return PLACEHOLDER.sub(rep, text)
 
     def flatten(self, prefix, obj):
-        # Measured on the platform (g-a, 11 Oct): only the leaves exist, as strings, under "<step name>_response.<path>"
-        # ("api_acct_response.data.products.0.past_due": "420"). There is no variable that holds the list or the object itself.
+        # Measured on the platform (g-a, 11 Oct): only the leaves exist, under "<step name>_response.<path>"
+        # ("api_acct_response.data.products.0.past_due": 420; booleans as 'true'/'false'). There is no variable that holds the list or the object itself.
         if isinstance(obj, dict):
             for k, v in obj.items(): self.flatten(f"{prefix}.{k}", v)
         elif isinstance(obj, list):
             for i, v in enumerate(obj): self.flatten(f"{prefix}.{i}", v)
         elif isinstance(obj, bool): self.vars[prefix] = "true" if obj else "false"     # booleans from results arrive as strings
-        else: self.vars[prefix] = "null" if obj is None else str(obj)
+        else: self.vars[prefix] = "null" if obj is None else obj        # numbers keep their type in the platform's variable table (past_due=420); null is the text 'null'
 
     # ------------------------------------------------------------------ conditions
     @staticmethod

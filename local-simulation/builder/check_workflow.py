@@ -122,6 +122,12 @@ def check(wf, api, side_questions=True):
     for name, members in sorted(enums.items()):
         lost = sorted(m for m in members if m not in consts)
         if lost: warn.append(f"extraction variable {name!r}: the values {lost} appear in no code and no transition, so such a reply is handled by a default branch. Handle each value, or take it out of the enum")
+    # measured on the platform: right answers come back with a confidence of 0.50-0.60; a higher threshold drops them silently
+    for k, n in nodes.items():
+        for e in n.get("extraction_schema") or []:
+            try:
+                if float(e["min_confidence"] if e.get("min_confidence") is not None else 0.95) > 0.3: err.append(f"step {k!r}, extraction variable {e.get('name')!r}: min_confidence {e.get('min_confidence', 'is missing (default 0.95), which')} is too high. The platform returns right answers with a confidence of 0.5 to 0.6; use 0.3 or lower, or leave it out")
+            except (TypeError, ValueError): pass
     # the platform runs code inside a function: `global` then names another object than the top-level one (seen: the saved state lost its keys, 27 of 30 calls failed)
     import ast as _ast
     for path, v in walk(wf):

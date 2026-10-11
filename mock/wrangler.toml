@@ -1,0 +1,18 @@
+name = "freya-bank-mock"
+main = "src/worker.js"
+compatibility_date = "2026-09-01"
+workers_dev = true
+
+# request logs in the dashboard (and `npx wrangler tail` for a live view)
+[observability]
+enabled = true
+
+# One Durable Object per customer_id holds that customer's state. The binding name must equal `binding` in src/data.js.
+[[durable_objects.bindings]]
+name = "CUSTOMER"
+class_name = "BankCustomer"
+
+# SQLite-backed Durable Objects: the only kind the free plan allows.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["BankCustomer"]
