@@ -23,7 +23,8 @@ HERE = pathlib.Path(__file__).resolve().parent
 SIM = HERE.parent / "sim" / "local.py"
 KIT = HERE.parent.parent / "kit" / "build-the-builder"
 BUDGET = int(os.environ.get("BUILD_BUDGET_SECONDS", 60 * 60))         # the whole run stays under this (default 60 minutes; the event's rules no longer set a limit, an earlier version of them said 30). --budget-minutes or BUILD_BUDGET_SECONDS=1680 gives the 28-minute run back
-STALE_ROUNDS = 2                                                      # the repair loop also ends after this many rounds in a row that did not beat the best version so far
+STALE_ROUNDS = 4                                                      # the repair loop also ends after this many rounds in a row that did not beat the best version so far
+SAFE_PART = 0.9                                                       # after this part of the budget is used, no new repair round starts; what is running is finished, tested and delivered
 REPAIR_NEEDS = 170 + 150                                              # the first repair round is started with this much left (a short turn with checkpoints is worth it)
 AFTER_REPAIR = 170        # re-test (63-112 s measured) + delivery; the model-free test after a repair runs only when there is time for it
 REPAIR_TURN = 270         # one repair turn is at most this long, so that two or three rounds of repair and re-test fit: measured, a re-test tells more than a longer turn (10 -> 20 of 28 after a 98 s turn)
@@ -495,7 +496,8 @@ class Run:
                 needs = REPAIR_NEEDS_PLATFORM if (a.cases and a.test_on == "platform") else REPAIR_NEEDS
                 fuzz, n_fuzz = await self.fuzz(0, s["folder"] if s else None) if a.fuzz else ("(not run)", 0)
                 best_score, stale = None, 0
-                while not self.dead and self.left() > (needs if rnd == 0 or a.test_on == "platform" else REPAIR_NEEDS_LATER) and rnd < a.max_repairs:
+                last_part = max(REPAIR_NEEDS_LATER, (1 - SAFE_PART) * BUDGET)          # no repair round starts in the last tenth of the budget: that time belongs to the final test and the delivery
+                while not self.dead and self.left() > last_part and self.left() > (needs if rnd == 0 or a.test_on == "platform" else REPAIR_NEEDS_LATER) and rnd < a.max_repairs:
                     tests, n_bad = self.failed_calls(s, rnd) if s else ("", 0)
                     n_bad += n_fuzz                                                  # a defect of the model-free test is repaired like a failed customer
                     findings = json.loads((self.out / "review.json").read_text())
@@ -532,7 +534,7 @@ class Run:
                     if not a.cases:
                         if a.fuzz: await self.fuzz(rnd)
                         break
-                    s = await self.test(rnd)
+                    s = await self.test(rnd)                                         # every repair round is followed by the full test with simulated customers, then the model-free test
                     if a.fuzz and self.left() > REPAIR_NEEDS_LATER + 150: fuzz, n_fuzz = await self.fuzz(rnd, s["folder"])      # only when a further repair round can still use its findings
                     elif a.fuzz: self.say(f"model-free test {rnd}: skipped, {self.left():.0f} s left"); n_fuzz = 0
             else:

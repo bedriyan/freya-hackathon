@@ -16,8 +16,10 @@ step writes one from the service contract in the documents.
 **Time budget.** A run has a budget of 60 minutes by default (`--budget-minutes N` or `BUILD_BUDGET_SECONDS`). The first version of
 the event's rules limited a builder run to 30 minutes and this builder ran with a budget of 28; the rules published for the final
 no longer set a limit, so the default is now 60 minutes and the repair loop is no longer cut short by the clock. It ends as soon as
-every test customer passes and the model-free test is clean, or when two repair rounds in a row bring no improvement, so a run
-that is done after 40 minutes stops after 40 minutes. `--budget-minutes 28` gives the earlier behaviour back.
+every test customer passes and the model-free test is clean, or when four repair rounds in a row bring no improvement, so a run
+that is done after 40 minutes stops after 40 minutes. Every repair round is followed by the full test with simulated customers
+and the model-free test. No new round starts in the last tenth of the budget: that time is for the final test and the delivery,
+and the best tested version is what is delivered. `--budget-minutes 28` gives the earlier behaviour back.
 
 Output: `local-simulation/builder/out/<name>/` (`workflow.json`, `exported.workflow.json`, `rules.md`, `gen.py`, `selftest.py`,
 `cases.json`, test and repair reports, `build-report.json`, `trace.txt`) and the full JSON-lines trace in
