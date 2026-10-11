@@ -25,6 +25,8 @@ Output: `local-simulation/builder/out/<name>/` (`workflow.json`, `exported.workf
 
 ## What one run does
 
+Diagrams of the run, of what runs in parallel, of the repair loop and of the local simulation engine: [ARCHITECTURE.md](ARCHITECTURE.md).
+
 1. **Build** (Claude Opus, Claude Agent SDK, skill `local-simulation/builder/.claude/skills/build-phone-agent/SKILL.md`): reads the
    brief, writes a numbered rule list (`rules.md`, checked against the brief by `check_rules.py`), then a generator (`gen.py`) that
    holds the whole call logic as one code library and writes the workflow, and unit tests of the rules (`selftest.py`).
@@ -53,6 +55,7 @@ Without `ANTHROPIC_API_KEY` in the environment steps 2 and 4 to 6 are skipped an
 | `local-simulation/cases/CASE-FORMAT.md` | how test customers are written |
 | `kit/build-the-builder/` | the organisers' kit (scorer and runner are used by the local test) |
 | `scripts/run_cases_retry.py` | the kit's runner with network retries (only for `--test-on platform`) |
+| `ARCHITECTURE.md` | diagrams of the builder and of the local simulation engine; updated with every structural change |
 | `submission/`, `traces/` | the exported phone agents and the traces of the runs that made them; see `SUBMISSION.md` |
 
 Nothing in the builder comes from a hidden brief.
