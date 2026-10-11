@@ -1,0 +1,10 @@
+{
+  "team": "Bedirhan Keskin",
+  "members": [{"name": "Bedirhan Keskin", "email": "bedriyan@gmail.com"}],
+  "repo": "https://github.com/bedriyan/freya-hackathon",
+  "commit": "71a8a10",
+  "run_command": "python3 local-simulation/builder/build.py {case_folder} {mock_url} --slot final-70 --budget-minutes 70",
+  "workflow": "submission/final.workflow.json",
+  "trace": "traces/final.session.jsonl",
+  "mock_url": "https://freya-statement-mock.bedriyan.workers.dev"
+}
